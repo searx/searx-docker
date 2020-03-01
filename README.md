@@ -15,23 +15,17 @@ This is a work in progress, the bot protection is basic and not battle tested, a
 | [Searx-checker](https://github.com/searx/searx-checker) | Check which engines return results of the instance.<br>JSON result available at<br>```https://{SEARX_HOSTNAME}/status```<br>Automatically updated every 24h | [searx/searx-checker:latest](https://hub.docker.com/r/searx/searx-checker) | [Dockerfile](https://github.com/searx/searx-checker/blob/master/Dockerfile) |
 
 ## How to use it
-- [Install docker](https://docs.docker.com/install/)
-- [Install docker-compose](https://docs.docker.com/compose/install/) (be sure that docker-compose version is at least 1.9.0).
-- Get searx-docker
+1. [Install docker](https://docs.docker.com/install/)
+2. [Install docker-compose](https://docs.docker.com/compose/install/) (be sure that docker-compose version is at least 1.9.0).
+3. Get searx-docker
 ```sh
 cd /usr/local
 git clone https://github.com/searx/searx-docker.git
 cd searx-docker
 ```
-- Edit the [.env](https://github.com/searx/searx-docker/blob/master/.env) file according to your need
-- Check everything is working: ```./start.sh```,
-- ```cp searx-docker.service.template searx-docker.service```
-- edit the content of ```WorkingDirectory``` in the ```searx-docker.service``` file (only if the installation path is different from /usr/local/searx-docker)
-- Install the systemd unit :
-```sh
-systemctl enable $(pwd)/searx-docker.service
-systemctl start searx-docker.service
-```
+4. Edit the [.env](https://github.com/searx/searx-docker/blob/master/.env) file according to your need.
+5. Check everything is working: ```./start.sh```.
+6. Start the containers in background: ```./start.sh -d```.
 
 ## Note on the image proxy feature
 
@@ -39,17 +33,20 @@ The searx image proxy is activated by default using [Morty](https://github.com/a
 
 The default [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy) allow the browser to access to {SEARX_HOSTNAME} and ```https://*.tile.openstreetmap.org;```.
 
-If some users wants to disable the image proxy, you have to modify [./Caddyfile](https://github.com/searx/searx-docker/blob/master/Caddyfile). Replace the ```img-src 'self' data: https://*.tile.openstreetmap.org;``` by ```img-src * data:;```
+If some users wants to disable the image proxy, you have to modify [./caddy.conf.d/csp.conf](https://github.com/searx/searx-docker/blob/master/caddy.conf.d/csp.conf). Replace the ```img-src 'self' data: https://*.tile.openstreetmap.org;``` by ```img-src * data:;```
+
+## Add directives to the Caddyfile
+You may add any directives you want in the ```caddy.conf.d``` directory by creating a new file in it.
+Please refer to the documentation for more details: https://caddyserver.com/v1/docs/import
 
 ## Custom docker-compose.yaml
 
 Do not modify docker-compose.yaml otherwise you won't be able to update easily from the git repository.
 
 It is possible to the [extend feature](https://docs.docker.com/compose/extends/) of docker-compose :
-- stop the service : ```systemctl stop searx-docker.service```
-- create a new docker-compose-extend.yaml, check with ```start.sh```
-- update searx-docker.service (see SEARX_DOCKERCOMPOSEFILE)
-- restart the servie  : ```systemctl restart searx-docker.service```
+1. stop the containers : ```cd /usr/local/searx-docker && ./stop.sh```
+2. create a new docker-compose-extend.yaml, check with ```./start.sh```
+3. restart the containers in background : ```./restart.sh -d```
 
 ## Multi Architecture Docker images
 

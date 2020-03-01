@@ -3,24 +3,19 @@ version: '3.7'
 services:
 
   caddy:
-    container_name: caddy
-    image: abiosoft/caddy:1.0.3-no-stats
+    image: lucaslorentz/caddy-docker-proxy:latest
+    restart: always
     ports:
       - 80:80
       - 443:443
-    network_mode: host
-    command: -email ${LETSENCRYPT_EMAIL} -agree=${LETSENCRYPT_AGREE} -log stdout -host ${SEARX_HOSTNAME} -conf /etc/Caddyfile
+    command: -email ${LETSENCRYPT_EMAIL} -agree=${LETSENCRYPT_AGREE} -log stdout
     volumes:
-      - ./Caddyfile:/etc/Caddyfile:rw
       - ./caddy:/root/.caddy:rw
-      - ./srv:/srv:rw
-      - searx-checker:/srv/searx-checker:rw
+      - ./caddy.conf.d:/root/.caddy.conf.d:ro
+      - ./srv:/srv:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      - SEARX_HOSTNAME=${SEARX_HOSTNAME}
-      - SEARX_PROTOCOL=${SEARX_PROTOCOL:-}
       - SEARX_TLS=${SEARX_TLS:-}
-      - FILTRON_USER=${FILTRON_USER}
-      - FILTRON_PASSWORD=${FILTRON_PASSWORD}
     cap_drop:
       - ALL
     cap_add:
@@ -28,36 +23,75 @@ services:
       - DAC_OVERRIDE
 
   filtron:
-    container_name: filtron
     image: dalf/filtron
-    hostname: filtron
     restart: always
     ports:
-      - 127.0.0.1:4040:4040
       - 127.0.0.1:4041:4041
-    networks:
-      searx:
-        ipv4_address: 10.10.10.3
-    command: -listen 10.10.10.3:4040 -api 10.10.10.3:4041 -target 10.10.10.4:8080
+    labels:
+      - 'caddy.address=${SEARX_PROTOCOL:-}${SEARX_HOSTNAME}'
+      - 'caddy.import=/root/.caddy.conf.d/*'
+      - 'caddy.targetport=4040'
+      - 'caddy.proxy.transparent'
+      - 'caddy.header_0=/config'
+      - 'caddy.header_0.Access-Control-Allow-Methods="GET, OPTIONS"'
+      - 'caddy.header_0.Access-Control-Allow-Origin="*"'
+      - 'caddy.header_1=/status'
+      - 'caddy.header_1.Access-Control-Allow-Methods="GET, OPTIONS"'
+      - 'caddy.header_1.Access-Control-Allow-Origin="*"'
+      - 'caddy.header_2=/'
+      # Enable HTTP Strict Transport Security (HSTS) to force clients to always connect via HTTPS
+      - 'caddy.header_2.Strict-Transport-Security="max-age=31536000; includeSubDomains; preload"'
+      # Enable cross-site filter (XSS) and tell browser to block detected attacks
+      - 'caddy.header_2.X-XSS-Protection="1; mode=block"'
+      # Prevent some browsers from MIME-sniffing a response away from the declared Content-Type
+      - 'caddy.header_2.X-Content-Type-Options="nosniff"'
+      # Disallow the site to be rendered within a frame (clickjacking protection)
+      - 'caddy.header_2.X-Frame-Options="SAMEORIGIN"'
+      # Disable some features
+      - 'caddy.header_2.Feature-Policy="accelerometer ''none'';ambient-light-sensor ''none''; autoplay ''none'';camera ''none'';encrypted-media ''none'';focus-without-user-activation ''none''; geolocation ''none'';gyroscope ''none'';magnetometer ''none'';microphone ''none'';midi ''none'';payment ''none'';picture-in-picture ''none''; speaker ''none'';sync-xhr ''none'';usb ''none'';vr ''none''"'
+      # Cache
+      - 'caddy.header_2.Cache-Control="no-cache, no-store"'
+      - 'caddy.header_2.Pragma="no-cache"'
+      # Referer
+      - 'caddy.header_2.Referrer-Policy="no-referrer"'
+      # X-Robots-Tag
+      - 'caddy.header_2.X-Robots-Tag="noindex, noarchive, nofollow"'
+      # Remove Server header
+      - 'caddy.header_2.-Server'
+      - 'caddy.header_3=/morty'
+      - 'caddy.header_3.Content-Security-Policy="default-src ''none''; style-src ''self'' ''unsafe-inline''; form-action ''self''; frame-ancestors ''self''; base-uri ''self''; img-src ''self'' data:; font-src ''self''; frame-src ''self''"'
+      - 'caddy.header_4=/static'
+      - 'caddy.header_4.Cache-Control="public, max-age=31536000"'
+      - 'caddy.header_4.-Pragma'
+      - 'caddy.proxy.header_upstream=X-Forwarded-TlsProto {tls_protocol}'
+      - 'caddy.proxy.header_upstream=X-Forwarded-TlsCipher {tls_cipher}'
+      - 'caddy.proxy.header_upstream=X-Forwarded-HttpsProto {proto}'
+      - 'caddy.proxy.except=/searx-checker/status.json'
+      - 'caddy.gzip.not=/morty'
+      - 'caddy.root=/srv'
+      - 'caddy.rewrite=/'
+      - 'caddy.rewrite.regexp=^/status$$'
+      - 'caddy.rewrite.to=/searx-checker/status.json'
+      - 'caddy.basicauth=/filtron ${FILTRON_USER} ${FILTRON_PASSWORD}'
+      - 'caddy.proxy_1=/filtron/rules filtron:4041'
+      - 'caddy.proxy_1.without=/filtron'
+      - 'caddy.proxy_2=/morty morty:3000'
+      - 'caddy.limits=10KB'
+    command: -listen 0.0.0.0:4040 -target searx:8080 -api 0.0.0.0:4041
     volumes:
-      - ./rules.json:/etc/filtron/rules.json:rw
+      - ./rules.json:/etc/filtron/rules.json:ro
     read_only: true
     cap_drop:
       - ALL
 
   searx:
-    container_name: searx
     image: searx/searx:latest
-    hostname: searx
     restart: always
-    networks:
-      searx:
-         ipv4_address: 10.10.10.4
     command: ${SEARX_COMMAND:-}
     volumes:
       - ./searx:/etc/searx:rw
     environment:
-      - BIND_ADDRESS=10.10.10.4:8080
+      - BIND_ADDRESS=0.0.0.0:8080
       - BASE_URL=https://${SEARX_HOSTNAME}/
       - MORTY_URL=https://${SEARX_HOSTNAME}/morty/
       - MORTY_KEY=${MORTY_KEY}
@@ -70,16 +104,9 @@ services:
       - DAC_OVERRIDE
 
   morty:
-    container_name: morty
     image: dalf/morty
-    hostname: morty
     restart: always
-    ports:
-      - 127.0.0.1:3000:3000
-    networks:
-      searx:
-        ipv4_address: 10.10.10.5
-    command: -listen 10.10.10.5:3000 -timeout 6 -ipv6
+    command: -listen 0.0.0.0:3000 -timeout 6 -ipv6
     environment:
       - MORTY_KEY=${MORTY_KEY}
     logging:
@@ -89,23 +116,8 @@ services:
       - ALL
 
   searx-checker:
-    container_name: searx-checker
     image: searx/searx-checker
-    hostname: searx-checker
     restart: always
-    networks:
-      searx:
-        ipv4_address: 10.10.10.6
-    command: -cron -o html/data/status.json http://10.10.10.4:8080
+    command: -cron -o html/data/status.json http://searx:8080
     volumes:
-      - searx-checker:/usr/local/searx-checker/html/data:rw
-
-networks:
-  searx:
-    ipam:
-      driver: default
-      config:
-        - subnet: 10.10.10.0/24
-
-volumes:
-  searx-checker:
+      - ./srv/searx-checker:/usr/local/searx-checker/html/data:rw

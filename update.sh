@@ -53,9 +53,9 @@ if [ ! -x "$(which systemctl)" ]; then
     exit 1
 fi
 
-# stop the systemd service now, because after the update
+# stop the containers now, because after the update
 # the code might be out of sync with the current running services
-systemctl stop "${SERVICE_NAME}"
+./stop.sh
 
 # update
 case "$UPDATE_TYPE" in
@@ -88,5 +88,5 @@ else
     docker-compose -f $DOCKERCOMPOSEFILE run searx ${SEARX_COMMAND} -d
 
     # let the user see
-    echo "Use\nsystemctl start \"${SERVICE_NAME}\"\nto restart searx"
+    echo "Use ./start.sh -d to start searx"
 fi

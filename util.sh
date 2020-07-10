@@ -24,3 +24,9 @@ if [ ! -f "${DOCKERCOMPOSEFILE}" ]; then
     echo "${DOCKERCOMPOSEFILE} not found" 1>&2
     exit 1
 fi
+
+create_rules_json() {
+    # $1 : requests host name $1 will bypass filtron
+    IPS="($(host $1 | rev | cut -d\  -f1 | rev | tr '\n' '|' | sed 's/.$//'))"
+    sed "s/\$CHECK_SEARX_SPACE_IPS/$IPS/" rules.json.template
+}

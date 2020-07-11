@@ -4,11 +4,10 @@ services:
 
   caddy:
     container_name: caddy
-    image: caddy/caddy:2-alpine
+    image: caddy:2-alpine
     network_mode: host
-    command: caddy run -config /etc/caddy/Caddyfile
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:rw
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - searx-checker:/srv/searx-checker:rw
       - caddy-data:/data:rw
       - caddy-config:/config:rw

@@ -47,7 +47,7 @@
         Permissions-Policy "accelerometer=();ambient-light-sensor=(); autoplay=();camera=();encrypted-media=();focus-without-user-activation=(); geolocation=();gyroscope=();magnetometer=();microphone=();midi=();payment=();picture-in-picture=(); speaker=();sync-xhr=();usb=();vr=()"
 
 	#Disable some feautres (legacy)
-	Feature-Policy "accelerometer 'none';ambient-light-sensor 'none'; autoplay 'none';camera 'none';encrypted-media 'none';focus-without-user-activation 'none'; geolocation 'none';gyroscope 'none';magnetometer 'none';microphone 'none';midi 'none';payment 'none';picture-in-picture 'none'; speaker 'none';sync-xhr 'none';usb 'none';vr 'none'"
+        Feature-Policy "accelerometer 'none';ambient-light-sensor 'none'; autoplay 'none';camera 'none';encrypted-media 'none';focus-without-user-activation 'none'; geolocation 'none';gyroscope 'none';magnetometer 'none';microphone 'none';midi 'none';payment 'none';picture-in-picture 'none'; speaker 'none';sync-xhr 'none';usb 'none';vr 'none'"
 
         # Referer
         Referrer-Policy "no-referrer"

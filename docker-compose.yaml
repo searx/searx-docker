@@ -6,7 +6,11 @@ services:
     container_name: caddy
     image: caddy:2-alpine
     restart: on-failure
-    network_mode: host
+    networks:
+      - searx
+    ports:
+      - "${SEARX_HTTP_PORT:-80}:80"
+      - "${SEARX_HTTPS_PORT:-443}:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data:rw
@@ -14,6 +18,7 @@ services:
     environment:
       - SEARX_HOSTNAME=${SEARX_HOSTNAME:-localhost}
       - SEARX_TLS=${LETSENCRYPT_EMAIL:-internal}
+      - PROTOCOL_OVERRIDE=${PROTOCOL_OVERRIDE:-}
     cap_drop:
       - ALL
     cap_add:
@@ -24,11 +29,10 @@ services:
     container_name: filtron
     image: dalf/filtron
     restart: always
-    ports:
-      - "127.0.0.1:4040:4040"
-      - "127.0.0.1:4041:4041"
     networks:
       - searx
+    ports:
+      - 4041:4041
     command: -listen 0.0.0.0:4040 -api 0.0.0.0:4041 -target searx:8080
     volumes:
       - ./rules.json:/etc/filtron/rules.json:rw
@@ -47,8 +51,8 @@ services:
       - ./searx:/etc/searx:rw
     environment:
       - BIND_ADDRESS=0.0.0.0:8080
-      - BASE_URL=https://${SEARX_HOSTNAME:-localhost}/
-      - MORTY_URL=https://${SEARX_HOSTNAME:-localhost}/morty/
+      - BASE_URL=${PROTOCOL_OVERRIDE:-}${SEARX_HOSTNAME}/
+      - MORTY_URL=${PROTOCOL_OVERRIDE:-}${SEARX_HOSTNAME}/morty/
       - MORTY_KEY=${MORTY_KEY}
     cap_drop:
       - ALL
@@ -62,8 +66,6 @@ services:
     container_name: morty
     image: dalf/morty
     restart: always
-    ports:
-      - "127.0.0.1:3000:3000"
     networks:
       - searx
     command: -timeout 6 -ipv6
@@ -76,6 +78,16 @@ services:
     cap_drop:
       - ALL
 
+  searx-checker:
+    container_name: searx-checker
+    image: searx/searx-checker
+    restart: always
+    networks:
+      - searx
+    command: -cron -o html/data/status.json ${PROTOCOL_OVERRIDE:-}searx:8080
+    volumes:
+      - checker-data:/usr/local/searx-checker/html/data
+
 networks:
   searx:
     ipam:
@@ -84,3 +96,4 @@ networks:
 volumes:
   caddy-data:
   caddy-config:
+  checker-data:

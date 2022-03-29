@@ -25,7 +25,7 @@ cd searx-docker
 - Edit the other settings in [.env](https://github.com/searx/searx-docker/blob/master/.env) file according to your need
 - Check everything is working: ```./start.sh```,
 - ```cp searx-docker.service.template searx-docker.service```
-- edit the content of ```WorkingDirectory``` in the ```searx-docker.service``` file (only if the installation path is different from /usr/local/searx-docker)
+- edit the content of ```WorkingDirectory``` (SEARX_DIR environment variable) in the ```searx-docker.service``` file (only if the installation path is different from /usr/local/searx-docker)
 - Install the systemd unit :
 ```sh
 systemctl enable $(pwd)/searx-docker.service

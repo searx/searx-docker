@@ -1,3 +1,7 @@
+**⚠️ Please use [this repository](https://github.com/searxng/searxng-docker) instead as searx-docker is not maintained anymore and migrated to SearXNG: https://github.com/searxng/searxng-docker! ⚠️**
+
+----------
+
 # searx-docker
 
 Create a new searx instance in five minutes using Docker (see https://github.com/asciimoo/searx/issues/1561 )
